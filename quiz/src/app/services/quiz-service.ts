@@ -1,6 +1,6 @@
 import { IUserSelectedAnswer } from '../models/answer';
 import { IQuestionCheckResult, IQuizResult } from '../models/result';
-import { post } from './rest.js';
+import { post } from './rest';
 
 export async function calculateResult(answers: IUserSelectedAnswer[]) {
     return await post<IQuizResult>('calculate-result', {answers});

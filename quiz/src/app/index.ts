@@ -1,7 +1,8 @@
 import {IQuestion} from './models/question';
 import {IAnswer, IUserSelectedAnswer} from './models/answer';
-import {calculateResult, checkAnswer} from './services/quiz-service.js';
-import {getQuestions} from './services/questions-service.js';
+import {calculateResult, checkAnswer} from './services/quiz-service';
+import {getQuestions} from './services/questions-service';
+import './../styles/index.scss';
 
 const questionEl = document.querySelector<HTMLHeadingElement>('#question-text') as HTMLHeadingElement;
 const answerBtns = document.querySelector<HTMLDivElement>('#answer-buttons') as HTMLDivElement;
