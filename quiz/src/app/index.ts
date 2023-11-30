@@ -1,118 +1,129 @@
 import {IQuestion} from './models/question';
 import {IAnswer, IUserSelectedAnswer} from './models/answer';
 import {calculateResult, checkAnswer} from './services/quiz-service';
-import {getQuestions} from './services/questions-service';
 import './../styles/index.scss';
+import {getQuestions} from './services/questions-service';
 
-const questionEl = document.querySelector<HTMLHeadingElement>('#question-text') as HTMLHeadingElement;
-const answerBtns = document.querySelector<HTMLDivElement>('#answer-buttons') as HTMLDivElement;
-const nextBtn = document.querySelector<HTMLButtonElement>('#next-btn') as HTMLButtonElement;
+export class App {
+    public questionEl: HTMLHeadingElement;
+    public answerBtns: HTMLDivElement;
+    public nextBtn: HTMLButtonElement;
 
-let currentQuestionIdx = 0;
-let questions: IQuestion[] = [];
-let answers: IUserSelectedAnswer[] = [];
+    public currentQuestionIdx = 0;
+    public questions: IQuestion[] = [];
+    public answers: IUserSelectedAnswer[] = [];
 
-window.addEventListener('DOMContentLoaded', init);
+    constructor() {
+        this.questionEl = document.querySelector<HTMLHeadingElement>('#question-text') as HTMLHeadingElement;
+        this.answerBtns = document.querySelector<HTMLDivElement>('#answer-buttons') as HTMLDivElement;
+        this.nextBtn = document.querySelector<HTMLButtonElement>('#next-btn') as HTMLButtonElement;
+    }
 
-async function init() {
-    nextBtn.addEventListener('click', async () => {
-        if (currentQuestionIdx < questions.length) {
-            await goToNextQuestion();
+    public async init() {
+        this.questions = await getQuestions();
+        this.nextBtn.addEventListener('click', () => this.nextBtnHandler());
+        this.startQuiz();
+    }
+
+    public async nextBtnHandler() {
+        if (this.currentQuestionIdx < this.questions.length) {
+            await this.goToNextQuestion();
         } else {
-            startQuiz();
+            this.startQuiz();
         }
-    });
-
-    questions = await getQuestions();
-
-    startQuiz();
-}
-
-function startQuiz() {
-    currentQuestionIdx = 0;
-    showQuestion();
-}
-
-function showQuestion() {
-    resetState();
-
-    let currentQuestion = questions[currentQuestionIdx];
-    let questionNumber = currentQuestionIdx + 1;
-
-    questionEl.innerHTML = `${questionNumber}. ${currentQuestion.question}`;
-
-    currentQuestion.answers.forEach(createAnswerButton);
-}
-
-function resetState() {
-    nextBtn.style.display = 'none';
-    while (answerBtns.firstChild) {
-        answerBtns.removeChild(answerBtns.firstChild);
-    }
-}
-
-function createAnswerButton(answer: IAnswer) {
-    const button = document.createElement('button');
-    button.innerHTML = answer.text;
-    button.type = 'button';
-    button.classList.add('button', 'question__answer');
-    answerBtns.appendChild(button);
-
-    button.dataset.id = answer.id.toString();
-    button.addEventListener('click', selectAnswer);
-}
-
-async function selectAnswer(e: MouseEvent) {
-    const selectedBtn = e.target as HTMLButtonElement;
-    if (!selectedBtn.dataset.id) {
-        throw Error('Can not find id info');
-    }
-    const answerId = +selectedBtn.dataset.id;
-    const {isCorrect, correctAnswerId} = await checkAnswer(answerId, questions[currentQuestionIdx].id);
-
-    if (isCorrect) {
-        selectedBtn.classList.add('question__answer--correct');
-    } else {
-        selectedBtn.classList.add('question__answer--incorrect');
     }
 
-    Array.from(answerBtns.children)
-        .filter((element) => element instanceof HTMLButtonElement)
-        .forEach((b: Element) => {
-            let button: HTMLButtonElement = b as HTMLButtonElement; // If we use force typing in 80 line it does not work.
+    public startQuiz() {
+        this.currentQuestionIdx = 0;
+        this.showQuestion();
+    }
 
-            if (!button.dataset.id) {
-                throw Error('Can not find id info');
-            }
+    public showQuestion() {
+        this.resetState();
 
-            if (+button.dataset.id === correctAnswerId) {
-                button.classList.add('question__answer--correct');
-            }
-            button.disabled = true;
+        let currentQuestion = this.questions[this.currentQuestionIdx];
+        let questionNumber = this.currentQuestionIdx + 1;
+
+        this.questionEl.innerHTML = `${questionNumber}. ${currentQuestion.question}`;
+
+        currentQuestion.answers.forEach((item) => this.createAnswerButton(item));
+    }
+
+    public resetState() {
+        this.nextBtn.style.display = 'none';
+        while (this.answerBtns.firstChild) {
+            this.answerBtns.removeChild(this.answerBtns.firstChild);
+        }
+    }
+
+    public createAnswerButton(answer: IAnswer) {
+        const button = document.createElement('button');
+        button.innerHTML = answer.text;
+        button.type = 'button';
+        button.classList.add('button', 'question__answer');
+        this.answerBtns.appendChild(button);
+
+        button.dataset.id = answer.id.toString();
+        button.addEventListener('click', this.selectAnswer);
+    }
+
+    public async selectAnswer(e: MouseEvent) {
+        const selectedBtn = e.target as HTMLButtonElement;
+        if (!selectedBtn.dataset.id) {
+            throw Error('Can not find id info');
+        }
+        const answerId = +selectedBtn.dataset.id;
+        const {isCorrect, correctAnswerId} = await checkAnswer(answerId, this.questions[this.currentQuestionIdx].id);
+
+        if (isCorrect) {
+            selectedBtn.classList.add('question__answer--correct');
+        } else {
+            selectedBtn.classList.add('question__answer--incorrect');
+        }
+
+        Array.from(this.answerBtns.children)
+            .filter((element) => element instanceof HTMLButtonElement)
+            .forEach((b: Element) => {
+                let button: HTMLButtonElement = b as HTMLButtonElement; // If we use force typing in 80 line it does not work.
+
+                if (!button.dataset.id) {
+                    throw Error('Can not find id info');
+                }
+
+                if (+button.dataset.id === correctAnswerId) {
+                    button.classList.add('question__answer--correct');
+                }
+                button.disabled = true;
+            });
+
+        this.answers.push({
+            questionId: this.questions[this.currentQuestionIdx].id,
+            answerId
         });
+        this.nextBtn.style.display = 'block';
+    }
 
-    answers.push({
-        questionId: questions[currentQuestionIdx].id,
-        answerId
-    });
-    nextBtn.style.display = 'block';
-}
+    public async goToNextQuestion() {
+        this.currentQuestionIdx++;
+        if (this.currentQuestionIdx < this.questions.length) {
+            this.showQuestion();
+        } else {
+            await this.showScore();
+        }
+    }
 
-async function goToNextQuestion() {
-    currentQuestionIdx++;
-    if (currentQuestionIdx < questions.length) {
-        showQuestion();
-    } else {
-        await showScore();
+    public async showScore() {
+        this.resetState();
+        const {score} = await calculateResult(this.answers);
+        this.answers = [];
+
+        this.questionEl.innerHTML = `You scored ${score} out of ${this.questions.length}`;
+        this.nextBtn.innerHTML = 'Play Again';
+        this.nextBtn.style.display = 'block';
     }
 }
 
-async function showScore() {
-    resetState();
-    const {score} = await calculateResult(answers);
-    answers = [];
-
-    questionEl.innerHTML = `You scored ${score} out of ${questions.length}`;
-    nextBtn.innerHTML = 'Play Again';
-    nextBtn.style.display = 'block';
-}
+window.addEventListener('DOMContentLoaded', () => {
+    const app = new App();
+    app.init();
+});
